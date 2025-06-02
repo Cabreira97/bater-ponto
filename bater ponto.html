@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilha de Horas de Trabalho Mensal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.6);
+        }
+        .table-cell-input {
+            min-width: 90px; /* Adjusted min-width for more inputs */
+            padding-left: 0.5rem; /* Tailwind pl-2 */
+            padding-right: 0.5rem; /* Tailwind pr-2 */
+        }
+        .table-header-shift {
+            text-align: center;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8">
+    <div class="container mx-auto max-w-7xl bg-white shadow-xl rounded-lg p-6">
+        <header class="mb-6 text-center">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-700">Planilha de Horas de Trabalho Mensal</h1>
+            <p class="text-sm text-gray-500" id="currentMonthDisplay">Mês Atual</p>
+        </header>
+
+        <div id="loadingState" class="flex flex-col items-center justify-center my-10">
+            <div class="loader mb-2"></div>
+            <p class="text-gray-600">Carregando dados...</p>
+        </div>
+
+        <div id="appContent" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-md">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th rowspan="2" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-middle">Dia</th>
+                            <th rowspan="2" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-middle">Data</th>
+                            <th colspan="2" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider table-header-shift border-b border-l">Manhã</th>
+                            <th colspan="2" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider table-header-shift border-b border-l">Tarde</th>
+                            <th colspan="2" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider table-header-shift border-b border-l">Noite</th>
+                            <th rowspan="2" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-middle border-l">Horas Dia</th>
+                            <th rowspan="2" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-middle">Status Dia</th>
+                        </tr>
+                        <tr>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input border-l">Início</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input">Fim</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input border-l">Início</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input">Fim</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input border-l">Início</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider table-cell-input">Fim</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesheetBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="mt-8 p-6 bg-slate-50 rounded-lg shadow">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Resumo Mensal</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-md shadow">
+                        <p class="text-sm text-blue-700 font-medium">Meta Mensal (aprox.)</p>
+                        <p id="targetMonthlyDisplay" class="text-2xl font-bold text-blue-800">0h 0m</p>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-md shadow">
+                        <p class="text-sm text-green-700 font-medium">Total Trabalhado no Mês</p>
+                        <p id="totalWorkedMonthly" class="text-2xl font-bold text-green-800">0h 0m</p>
+                    </div>
+                    <div class="bg-orange-100 p-4 rounded-md shadow">
+                        <p class="text-sm text-orange-700 font-medium">Total Horas Extras (Mês)</p>
+                        <p id="totalOvertimeMonthly" class="text-2xl font-bold text-orange-800">0h 0m</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+         <div id="messageModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+                <h3 id="messageModalTitle" class="text-lg font-medium leading-6 text-gray-900 mb-2">Mensagem</h3>
+                <p id="messageModalText" class="text-sm text-gray-600 mb-4">Conteúdo da mensagem.</p>
+                <button id="messageModalClose" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let currentMonthId = '';
+        let currentMonthDataObject = null;
+        const dailyTargetMinutes = 8 * 60; // 480 minutos (8 horas) - usado para status diário
+
+        const timesheetBody = document.getElementById('timesheetBody');
+        const totalWorkedMonthlyEl = document.getElementById('totalWorkedMonthly');
+        const totalOvertimeMonthlyEl = document.getElementById('totalOvertimeMonthly');
+        const targetMonthlyDisplayEl = document.getElementById('targetMonthlyDisplay');
+        const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+        const loadingState = document.getElementById('loadingState');
+        const appContent = document.getElementById('appContent');
+        
+        const messageModal = document.getElementById('messageModal');
+        const messageModalTitle = document.getElementById('messageModalTitle');
+        const messageModalText = document.getElementById('messageModalText');
+        const messageModalClose = document.getElementById('messageModalClose');
+
+        messageModalClose.addEventListener('click', () => messageModal.classList.add('hidden'));
+
+        function showMessage(title, text) {
+            messageModalTitle.textContent = title;
+            messageModalText.textContent = text;
+            messageModal.classList.remove('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Carregado. Inicializando planilha mensal com localStorage.");
+            initializeTimesheet();
+        });
+
+        function getMonthId(d) {
+            // Retorna o ID do mês no formato YYYY-MM
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+        
+        function getDaysForMonth(year, month_one_indexed) { // month_one_indexed é 1-12
+            // Retorna um array de objetos, cada um representando um dia do mês
+            const datesInfo = [];
+            // new Date(year, month_one_indexed, 0) retorna o último dia do mês anterior.
+            // new Date(year, month_one_indexed, 0).getDate() retorna o número de dias no mês (month_one_indexed -1).
+            // Para obter o número de dias no mês atual (month_one_indexed), usamos month_one_indexed para o mês.
+            const daysInMonth = new Date(year, month_one_indexed, 0).getDate();
+            const currentLocale = 'pt-BR';
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                // Usar Date.UTC para criar datas para evitar problemas de fuso horário na lógica do dia
+                const date = new Date(Date.UTC(year, month_one_indexed - 1, i));
+                datesInfo.push({
+                    dateObj: date,
+                    dateStr: formatDate(date),
+                    dayName: date.toLocaleDateString(currentLocale, { weekday: 'long', timeZone: 'UTC' })
+                                   .split(',')[0] 
+                                   .replace(/^\w/, c => c.toUpperCase()) 
+                });
+            }
+            return datesInfo;
+        }
+
+        function initializeTimesheet() {
+            loadingState.classList.remove('hidden');
+            appContent.classList.add('hidden');
+
+            const today = new Date();
+            currentMonthId = getMonthId(today);
+            const [yearStr, monthStr] = currentMonthId.split('-');
+            const year = parseInt(yearStr);
+            const month_one_indexed = parseInt(monthStr);
+
+            currentMonthDisplay.textContent = `Mês: ${String(month_one_indexed).padStart(2, '0')}/${year}`;
+            console.log(`Inicializando para o mês: ${currentMonthId}`);
+            
+            const daysDataForMonth = getDaysForMonth(year, month_one_indexed);
+
+            const storageKey = `timesheet_month_${currentMonthId}`;
+            try {
+                const storedData = localStorage.getItem(storageKey);
+                if (storedData) {
+                    currentMonthDataObject = JSON.parse(storedData);
+                    // Verificação de consistência dos dados carregados
+                    if (currentMonthDataObject.days.length !== daysDataForMonth.length) {
+                        console.warn("Inconsistência no número de dias. Recriando dados do mês.");
+                        currentMonthDataObject = createDefaultMonthData(daysDataForMonth);
+                    } else {
+                         // Atualizar nomes e datas caso o locale/formato mude, ou para garantir
+                        currentMonthDataObject.days.forEach((day, index) => {
+                            day.date = daysDataForMonth[index].dateStr;
+                            day.dayName = daysDataForMonth[index].dayName;
+                        });
+                        console.log("Dados do mês carregados do localStorage:", currentMonthDataObject);
+                    }
+                } else {
+                    console.log("Nenhum dado encontrado no localStorage para este mês, inicializando com padrão.");
+                    currentMonthDataObject = createDefaultMonthData(daysDataForMonth);
+                }
+            } catch (error) {
+                console.error("Erro ao carregar dados do localStorage:", error);
+                showMessage("Erro ao Carregar", "Houve um problema ao carregar os dados salvos. Iniciando com uma planilha vazia para o mês.");
+                currentMonthDataObject = createDefaultMonthData(daysDataForMonth);
+            }
+            
+            // Definir a meta mensal aqui, após currentMonthDataObject ser inicializado
+            currentMonthDataObject.targetMonthlyMinutes = dailyTargetMinutes * currentMonthDataObject.days.length;
+
+            renderTimesheet();
+            calculateMonthlyTotals(); // Calcula totais e atualiza o resumo após renderizar
+            loadingState.classList.add('hidden');
+            appContent.classList.remove('hidden');
+        }
+
+        function createDefaultMonthData(daysDataForMonth) {
+            // Cria a estrutura de dados padrão para um mês
+            return {
+                monthId: currentMonthId,
+                days: daysDataForMonth.map(dayInfo => ({
+                    dayName: dayInfo.dayName,
+                    date: dayInfo.dateStr,
+                    shifts: [ // Três turnos: Manhã, Tarde, Noite
+                        { start: "", end: "" }, 
+                        { start: "", end: "" }, 
+                        { start: "", end: "" }  
+                    ],
+                    workedMinutes: 0,
+                    status: `Faltam: ${formatDuration(dailyTargetMinutes)}`
+                })),
+                totalWorkedMinutes: 0,
+                totalOvertimeMinutes: 0,
+                targetMonthlyMinutes: dailyTargetMinutes * daysDataForMonth.length // Meta baseada em todos os dias do mês
+            };
+        }
+
+        function renderTimesheet() {
+            timesheetBody.innerHTML = ''; 
+
+            if (!currentMonthDataObject || !currentMonthDataObject.days) {
+                console.error("Dados do mês ausentes ou corrompidos. Não é possível renderizar.");
+                showMessage("Erro Crítico", "Não foi possível carregar os dados do mês para exibição.");
+                return;
+            }
+
+            currentMonthDataObject.days.forEach((day, dayIndex) => {
+                const tr = document.createElement('tr');
+                tr.id = `day-row-${dayIndex}`;
+                
+                let shiftInputsHtml = '';
+                day.shifts.forEach((shift, shiftIndex) => {
+                    shiftInputsHtml += `
+                        <td class="table-cell-input border-l"><input type="time" id="start-${dayIndex}-${shiftIndex}" value="${shift.start || ''}" class="form-input block w-full sm:text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-1.5"></td>
+                        <td class="table-cell-input"><input type="time" id="end-${dayIndex}-${shiftIndex}" value="${shift.end || ''}" class="form-input block w-full sm:text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-1.5"></td>
+                    `;
+                });
+
+                tr.innerHTML = `
+                    <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${day.dayName}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">${day.date}</td>
+                    ${shiftInputsHtml}
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700 font-semibold border-l" id="worked-${dayIndex}">${formatDuration(day.workedMinutes || 0)}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm ${ (day.workedMinutes || 0) > dailyTargetMinutes ? 'text-green-600' : ((day.workedMinutes || 0) < dailyTargetMinutes && (day.workedMinutes || 0) > 0 ? 'text-orange-600' : 'text-gray-500')}" id="status-${dayIndex}">${day.status}</td>
+                `;
+                timesheetBody.appendChild(tr);
+
+                day.shifts.forEach((shift, shiftIndex) => {
+                    ['start', 'end'].forEach(type => {
+                        const inputElement = document.getElementById(`${type}-${dayIndex}-${shiftIndex}`);
+                        inputElement.addEventListener('change', (event) => {
+                             handleInputChange(dayIndex, shiftIndex, type, event.target.value);
+                        });
+                         inputElement.addEventListener('blur', (event) => { 
+                             handleInputChange(dayIndex, shiftIndex, type, event.target.value);
+                        });
+                    });
+                });
+            });
+            // updateMonthlySummary(); // Movido para initializeTimesheet e handleInputChange
+        }
+        
+        function handleInputChange(dayIndex, shiftIndex, fieldType, value) {
+            // Atualiza o valor no objeto de dados
+            currentMonthDataObject.days[dayIndex].shifts[shiftIndex][fieldType] = value;
+            
+            // Recalcula as horas para o dia afetado
+            const dayData = currentMonthDataObject.days[dayIndex];
+            const { workedMinutes, status } = calculateDayHours(dayData);
+            
+            currentMonthDataObject.days[dayIndex].workedMinutes = workedMinutes;
+            currentMonthDataObject.days[dayIndex].status = status;
+
+            // Atualiza a interface para o dia
+            document.getElementById(`worked-${dayIndex}`).textContent = formatDuration(workedMinutes);
+            const statusEl = document.getElementById(`status-${dayIndex}`);
+            statusEl.textContent = status;
+            statusEl.className = `px-3 py-3 whitespace-nowrap text-sm ${ workedMinutes > dailyTargetMinutes ? 'text-green-600' : (workedMinutes < dailyTargetMinutes && workedMinutes > 0 ? 'text-orange-600' : 'text-gray-500')}`;
+            if (workedMinutes === 0 && !dayData.shifts.some(s => s.start || s.end)) { // Nenhum input, padrão
+                 statusEl.className = `px-3 py-3 whitespace-nowrap text-sm text-gray-500`;
+            }
+
+
+            // Recalcula os totais mensais e salva
+            calculateMonthlyTotals();
+            saveMonthData();
+        }
+
+        function calculateDayHours(dayObject) {
+            // Calcula o total de minutos trabalhados para um dia, somando todos os turnos válidos
+            let totalWorkedMinutesThisDay = 0;
+            let allShiftsEmpty = true;
+            let hasInvalidShiftTime = false;
+
+            for (const shift of dayObject.shifts) {
+                const start = parseTime(shift.start);
+                const end = parseTime(shift.end);
+
+                if (shift.start || shift.end) {
+                    allShiftsEmpty = false;
+                }
+
+                if (start !== null && end !== null) {
+                    if (end < start) {
+                        // Horário inválido no turno (fim antes do início)
+                        console.warn(`Horário inválido no turno: ${shift.start} - ${shift.end} para o dia ${dayObject.date}`);
+                        hasInvalidShiftTime = true; 
+                        // Este turno não contribui com horas, mas o dia pode ter outros turnos válidos.
+                    } else {
+                        totalWorkedMinutesThisDay += (end - start);
+                    }
+                } else if ((start !== null && end === null) || (start === null && end !== null)) {
+                    // Turno incompleto (apenas início ou apenas fim preenchido)
+                     allShiftsEmpty = false; // Considera que houve uma tentativa de entrada
+                     hasInvalidShiftTime = true; // Marcar como inválido para o status
+                }
+            }
+            
+            dayObject.workedMinutes = Math.max(0, totalWorkedMinutesThisDay);
+            let statusText = "";
+
+            if (allShiftsEmpty && dayObject.workedMinutes === 0) {
+                statusText = `Faltam: ${formatDuration(dailyTargetMinutes)}`;
+            } else if (hasInvalidShiftTime && dayObject.workedMinutes === 0 && !allShiftsEmpty) {
+                statusText = "Horário Inválido";
+            } else if (dayObject.workedMinutes > dailyTargetMinutes) {
+                const overtime = dayObject.workedMinutes - dailyTargetMinutes;
+                statusText = `Extra: ${formatDuration(overtime)}`;
+            } else if (dayObject.workedMinutes < dailyTargetMinutes) {
+                const remaining = dailyTargetMinutes - dayObject.workedMinutes;
+                statusText = `Faltam: ${formatDuration(remaining)}`;
+            } else if (dayObject.workedMinutes === dailyTargetMinutes) {
+                statusText = "Meta Cumprida";
+            }
+            
+            dayObject.status = statusText;
+            return { workedMinutes: dayObject.workedMinutes, status: dayObject.status };
+        }
+
+
+        function calculateMonthlyTotals() {
+            // Calcula os totais de horas trabalhadas e horas extras para o mês
+            let totalWorkedMonth = 0;
+            let totalOvertimeMonth = 0;
+            
+            if (!currentMonthDataObject || !currentMonthDataObject.days) return;
+
+            currentMonthDataObject.days.forEach(day => {
+                totalWorkedMonth += day.workedMinutes || 0;
+                // Soma horas extras apenas se o dia foi trabalhado e excedeu a meta diária
+                if ((day.workedMinutes || 0) > 0 && (day.workedMinutes || 0) > dailyTargetMinutes) {
+                    totalOvertimeMonth += ((day.workedMinutes || 0) - dailyTargetMinutes);
+                }
+            });
+            currentMonthDataObject.totalWorkedMinutes = totalWorkedMonth;
+            currentMonthDataObject.totalOvertimeMinutes = totalOvertimeMonth;
+            
+            // A meta mensal é calculada na inicialização e ao criar dados padrão
+            // currentMonthDataObject.targetMonthlyMinutes = dailyTargetMinutes * currentMonthDataObject.days.length;
+
+            updateMonthlySummary();
+        }
+        
+        function updateMonthlySummary() {
+            // Atualiza os elementos do resumo mensal na interface
+            if (!currentMonthDataObject) return;
+            targetMonthlyDisplayEl.textContent = formatDuration(currentMonthDataObject.targetMonthlyMinutes || 0);
+            totalWorkedMonthlyEl.textContent = formatDuration(currentMonthDataObject.totalWorkedMinutes || 0);
+            totalOvertimeMonthlyEl.textContent = formatDuration(currentMonthDataObject.totalOvertimeMinutes || 0);
+        }
+
+        function saveMonthData() {
+            // Salva os dados do mês atual no localStorage
+            if (!currentMonthId || !currentMonthDataObject) {
+                console.error("Não é possível salvar: ID do mês ou dados ausentes.");
+                showMessage("Erro ao Salvar", "Não foi possível identificar o mês atual ou não há dados para salvar.");
+                return;
+            }
+            
+            const storageKey = `timesheet_month_${currentMonthId}`;
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(currentMonthDataObject));
+                console.log("Dados do mês salvos com sucesso no localStorage:", currentMonthDataObject);
+            } catch (error) {
+                console.error("Erro ao salvar dados no localStorage:", error);
+                showMessage("Erro ao Salvar", "Falha ao salvar os dados no seu navegador. Verifique o armazenamento.");
+            }
+        }
+
+        // Funções Utilitárias
+        function parseTime(timeStr) { 
+            // Converte uma string de tempo (HH:MM) para minutos desde a meia-noite
+            if (!timeStr) return null;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return null;
+            return hours * 60 + minutes;
+        }
+
+        function formatDuration(totalMinutes) {
+            // Formata uma duração em minutos para o formato Xh Ym
+            if (isNaN(totalMinutes) || totalMinutes === null || totalMinutes < 0) return "0h 0m";
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.round(totalMinutes % 60); // Arredonda os minutos
+            return `${hours}h ${minutes}m`;
+        }
+
+        function formatDate(dateObj) {
+            // Formata um objeto Date para DD/MM/YYYY usando UTC para consistência
+            if (!dateObj || !(dateObj instanceof Date)) return '';
+            try {
+                const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); 
+                const year = dateObj.getUTCFullYear();
+                return `${day}/${month}/${year}`;
+            } catch (e) {
+                console.error("Erro ao formatar data:", dateObj, e);
+                return '';
+            }
+        }
+    </script>
+</body>
+</html>
+
